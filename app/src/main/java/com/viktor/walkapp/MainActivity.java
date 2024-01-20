@@ -116,10 +116,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16));
 
                     MarkerOptions myMarker = new MarkerOptions()
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.star))  //change later
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.location_marker))
                             .position(currentLocation)
                             .anchor(0.5f, 1)
-                            .alpha(0.7f)
+                            .alpha(1f)
                             .title("Start");
                     mMap.addMarker(myMarker);
                 }
@@ -162,10 +162,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.clear();
 
         MarkerOptions myMarker = new MarkerOptions()
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.star))  //change later
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.location_marker))
                 .position(currentLocation)
                 .anchor(0.5f, 1)
-                .alpha(0.7f)
+                .alpha(1f)
                 .title("Start");
         mMap.addMarker(myMarker);
 
