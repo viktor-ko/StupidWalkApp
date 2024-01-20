@@ -12,6 +12,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -41,18 +42,58 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import android.widget.Button;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
+    private LatLng currentLocation;
+
     @Override
     public void onMapReady(GoogleMap map) {
         mMap = map;
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
+
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng newPos) {
+                Button main_button = findViewById(R.id.main_button);
+                main_button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        generateRandomPoints(currentLocation);
+                    }
+                });
+            }
+        });
     }
 
+    public void onWalkButtonClick(View view) {
+        // Get the current location using LocationManager
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        if (locationManager != null) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+            if (lastKnownLocation != null) {
+                LatLng currentLocation = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+
+                // Generate random points and display walking routes
+                generateRandomPoints(currentLocation);
+            } else {
+                Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
     @SuppressLint("MissingPermission")
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -76,7 +117,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16));
 
                     MarkerOptions myMarker = new MarkerOptions()
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.star))
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.star))  //change later
                             .position(currentLocation)
                             .anchor(0.5f, 1)
                             .alpha(0.7f)
@@ -115,7 +156,80 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         };
         locationPermissionRequest.launch(PERMISSIONS);
     }
+    private List<LatLng> generateRandomPoints(LatLng currentLocation) {
+        List<LatLng> randomPoints = new ArrayList<>();
+        Random random = new Random();
 
+        for (int i = 0; i < 3; i++) {
+            double latOffset = random.nextDouble() * 0.01;  // 0.01 degrees is around 1 km
+            double lngOffset = random.nextDouble() * 0.01;
+
+            LatLng randomPoint = new LatLng(
+                    currentLocation.latitude + latOffset,
+                    currentLocation.longitude + lngOffset
+            );
+
+            randomPoints.add(randomPoint);
+        }
+
+        // Call a method to display walking routes for these random points
+        displayWalkingRoutes(currentLocation, randomPoints);
+
+        return randomPoints;
+    }
+
+    private void displayWalkingRoutes(LatLng currentLocation, List<LatLng> randomPoints) {
+        for (LatLng randomPoint : randomPoints) {
+            String url = "https://api.openrouteservice.org/v2/directions"
+                    + "foot-walking"
+                    + "?api_key=5b3ce3597851110001cf624860d4a9b68f9540bb8a7bd10b7055866e"
+                    + "&start=" + currentLocation.longitude + "," + currentLocation.latitude
+                    + "&end=" + randomPoint.longitude + "," + randomPoint.latitude;
+
+            new DownloadGeoJsonFile().execute(url);
+    }
+    }
+    private class DownloadGeoJsonFile extends AsyncTask<String, Void, GeoJsonLayer> {
+
+        @Override
+        protected GeoJsonLayer doInBackground(String... params) {
+            try {
+                InputStream stream = new URL(params[0]).openStream();
+
+                String line;
+                StringBuilder result = new StringBuilder();
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(stream));
+
+                while ((line = reader.readLine()) != null) {
+                    result.append(line);
+                }
+
+                reader.close();
+                stream.close();
+
+                return new GeoJsonLayer(mMap, new JSONObject(result.toString()));
+            } catch (IOException e) {
+                Log.e("mLogTag", "GeoJSON file could not be read");
+            } catch (JSONException e) {
+                Log.e("mLogTag",
+                        "GeoJSON file could not be converted to a JSONObject");
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(GeoJsonLayer layer) {
+            if (layer != null) {
+                GeoJsonLineStringStyle lineStringStyle =
+                        layer.getDefaultLineStringStyle();
+                lineStringStyle.setColor(Color.CYAN);
+                lineStringStyle.setWidth(5f);
+
+                layer.addLayerToMap();
+            }
+        }
+    }
 }
 
 //random points
@@ -230,46 +344,3 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 //    }
 //
 //
-//    private class DownloadGeoJsonFile extends AsyncTask<String, Void, GeoJsonLayer> {
-//
-//        @Override
-//        protected GeoJsonLayer doInBackground(String... params) {
-//            try {
-//                InputStream stream = new URL(params[0]).openStream();
-//
-//                String line;
-//                StringBuilder result = new StringBuilder();
-//                BufferedReader reader = new BufferedReader(
-//                        new InputStreamReader(stream));
-//
-//                while ((line = reader.readLine()) != null) {
-//                    result.append(line);
-//                }
-//
-//                reader.close();
-//                stream.close();
-//
-//                return new GeoJsonLayer(mMap, new JSONObject(result.toString()));
-//            } catch (IOException e) {
-//                Log.e("mLogTag", "GeoJSON file could not be read");
-//            } catch (JSONException e) {
-//                Log.e("mLogTag",
-//                        "GeoJSON file could not be converted to a JSONObject");
-//            }
-//            return null;
-//        }
-//
-//        @Override
-//        protected void onPostExecute(GeoJsonLayer layer) {
-//            if (layer != null) {
-//                GeoJsonLineStringStyle lineStringStyle =
-//                        layer.getDefaultLineStringStyle();
-//                lineStringStyle.setColor(Color.CYAN);
-//                lineStringStyle.setWidth(5f);
-//
-//                layer.addLayerToMap();
-//            }
-//        }
-//    }
-//
-//}
