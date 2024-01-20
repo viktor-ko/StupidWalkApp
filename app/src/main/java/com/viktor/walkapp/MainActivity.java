@@ -30,7 +30,6 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
 
@@ -87,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (lastKnownLocation != null) {
                 LatLng currentLocation = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
 
-                // Generate random points and display walking routes
+                // Generate 3 random points and display 3 walking routes from current location
                 generateRandomPoints(currentLocation);
             } else {
                 Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
@@ -125,14 +124,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     mMap.addMarker(myMarker);
                 }
             }
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
-
-            public void onProviderEnabled(String provider) {
-            }
-
-            public void onProviderDisabled(String provider) {
-            }
+//            public void onStatusChanged(String provider, int status, Bundle extras) {
+//            }
+//
+//            public void onProviderEnabled(String provider) {
+//            }
+//
+//            public void onProviderDisabled(String provider) {
+//            }
         };
 
         ActivityResultLauncher<String[]> locationPermissionRequest = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -160,6 +159,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         List<LatLng> randomPoints = new ArrayList<>();
         Random random = new Random();
 
+        mMap.clear();
+
+        MarkerOptions myMarker = new MarkerOptions()
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.star))  //change later
+                .position(currentLocation)
+                .anchor(0.5f, 1)
+                .alpha(0.7f)
+                .title("Start");
+        mMap.addMarker(myMarker);
+
         for (int i = 0; i < 3; i++) {
             double latOffset = random.nextDouble() * 0.01;  // 0.01 degrees is around 1 km
             double lngOffset = random.nextDouble() * 0.01;
@@ -170,6 +179,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             );
 
             randomPoints.add(randomPoint);
+
+            // Assign markers based on index
+            String markerResourceName;
+            switch (i) {
+                case 0:
+                    markerResourceName = "one";
+                    break;
+                case 1:
+                    markerResourceName = "two";
+                    break;
+                case 2:
+                    markerResourceName = "three";
+                    break;
+                default:
+                    markerResourceName = "one"; // Default to "one" if unexpected index
+                    break;
+            }
+
+            // Add markers for random points with individual PNG files
+            int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
+            mMap.addMarker(new MarkerOptions()
+                    .position(randomPoint)
+                    .icon(BitmapDescriptorFactory.fromResource(markerResourceId)));
         }
 
         // Call a method to display walking routes for these random points
@@ -223,8 +255,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (layer != null) {
                 GeoJsonLineStringStyle lineStringStyle =
                         layer.getDefaultLineStringStyle();
-                lineStringStyle.setColor(Color.CYAN);
-                lineStringStyle.setWidth(5f);
+                lineStringStyle.setColor(Color.parseColor("#07E9CD"));
+                lineStringStyle.setWidth(10f);
 
                 layer.addLayerToMap();
             }
