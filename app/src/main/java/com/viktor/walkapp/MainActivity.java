@@ -2,7 +2,10 @@ package com.viktor.walkapp;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.ContentValues;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.content.Context;
 import android.location.Location;
@@ -120,7 +123,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             .position(currentLocation)
                             .anchor(0.5f, 1)
                             .alpha(1f)
-                            .title("Start");
+                            .title("Start walking!");
                     mMap.addMarker(myMarker);
                 }
             }
@@ -166,48 +169,79 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .position(currentLocation)
                 .anchor(0.5f, 1)
                 .alpha(1f)
-                .title("Start");
+                .title("Start walking!");
         mMap.addMarker(myMarker);
 
+        double minDistanceKm = 1.0;
+        double maxDistanceKm = 1.5;
+
         for (int i = 0; i < 3; i++) {
-            double latOffset = random.nextDouble() * 0.01;  // 0.01 degrees is around 1 km
-            double lngOffset = random.nextDouble() * 0.01;
+            double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);
+            double bearing = random.nextDouble() * 360; // To avoid clustering of points and generation only on the north
 
-            LatLng randomPoint = new LatLng(
-                    currentLocation.latitude + latOffset,
-                    currentLocation.longitude + lngOffset
-            );
+            LatLng randomPoint = getPointAtDistanceAndBearing(currentLocation, distance, bearing);
 
-            randomPoints.add(randomPoint);
+            if (randomPoint != null) {
+                randomPoints.add(randomPoint);
 
-            // Assign markers based on index
-            String markerResourceName;
-            switch (i) {
-                case 0:
-                    markerResourceName = "one";
-                    break;
-                case 1:
-                    markerResourceName = "two";
-                    break;
-                case 2:
-                    markerResourceName = "three";
-                    break;
-                default:
-                    markerResourceName = "one"; // Default to "one" if unexpected index
-                    break;
+//        for (int i = 0; i < 3; i++) {
+//            double latOffset = random.nextDouble() * 0.01;  // 0.01 degrees is around 1 km
+//            double lngOffset = random.nextDouble() * 0.01;
+//
+//            LatLng randomPoint = new LatLng(
+//                    currentLocation.latitude + latOffset,
+//                    currentLocation.longitude + lngOffset
+//            );
+//
+//            randomPoints.add(randomPoint);
+
+                // Assign markers based on index
+                String markerResourceName;
+                switch (i) {
+                    case 0:
+                        markerResourceName = "one";
+                        break;
+                    case 1:
+                        markerResourceName = "two";
+                        break;
+                    case 2:
+                        markerResourceName = "three";
+                        break;
+                    default:
+                        markerResourceName = "one"; // Default to "one" if unexpected index
+                        break;
+                }
+
+                // Add markers for random points with individual PNG files
+                int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
+                if (mMap != null) {
+                    mMap.addMarker(new MarkerOptions()
+                            .position(randomPoint)
+                            .icon(BitmapDescriptorFactory.fromResource(markerResourceId)));
+                }
+
             }
-
-            // Add markers for random points with individual PNG files
-            int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
-            mMap.addMarker(new MarkerOptions()
-                    .position(randomPoint)
-                    .icon(BitmapDescriptorFactory.fromResource(markerResourceId)));
         }
 
         // Call a method to display walking routes for these random points
         displayWalkingRoutes(currentLocation, randomPoints);
 
         return randomPoints;
+    }
+    private LatLng getPointAtDistanceAndBearing(LatLng start, double distance, double bearing) {
+        double earthRadius = 6371.0; // Radius of the Earth in kilometers
+        double lat1 = Math.toRadians(start.latitude);
+        double lon1 = Math.toRadians(start.longitude);
+
+        double lat2 = Math.asin(Math.sin(lat1) * Math.cos(distance / earthRadius) +
+                Math.cos(lat1) * Math.sin(distance / earthRadius) * Math.cos(Math.toRadians(bearing)));
+        double lon2 = lon1 + Math.atan2(Math.sin(Math.toRadians(bearing)) * Math.sin(distance / earthRadius) * Math.cos(lat1),
+                Math.cos(distance / earthRadius) - Math.sin(lat1) * Math.sin(lat2));
+
+        lat2 = Math.toDegrees(lat2);
+        lon2 = Math.toDegrees(lon2);
+
+        return new LatLng(lat2, lon2);
     }
 
     private void displayWalkingRoutes(LatLng currentLocation, List<LatLng> randomPoints) {
@@ -262,6 +296,66 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         }
     }
+    public class LocationModel {
+
+        private int id;
+        private double latitude;
+        private double longitude;
+        private String type;
+    }
+
+    // Instantiate the DatabaseHelper
+    DatabaseHelper dbHelper = new DatabaseHelper(this);
+
+    // Get a writable database
+    SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+    // Insert the start location
+    insertLocation(db, currentLocation.latitude, currentLocation.longitude, "start");
+
+// Insert random points
+    for (LatLng point : randomPoints) {
+        insertLocation(db, point.latitude, point.longitude, "random");
+    }
+// Close the database when done
+db.close();
+
+    // Method to insert a location into the database
+    private void insertLocation(SQLiteDatabase db, double latitude, double longitude, String type) {
+        ContentValues values = new ContentValues();
+        values.put("latitude", latitude);
+        values.put("longitude", longitude);
+        values.put("type", type);
+
+        db.insert("locations", null, values);
+    }
+
+    // Assuming you want to retrieve all locations
+    List<LocationModel> locations = getAllLocations(db);
+
+    // Method to get all locations from the database
+    private List<LocationModel> getAllLocations(SQLiteDatabase db) {
+        List<LocationModel> locationList = new ArrayList<>();
+
+        Cursor cursor = db.query("walking_routes", null, null, null, null, null, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                LocationModel location = new LocationModel();
+                location.setId(cursor.getInt(cursor.getColumnIndex("id")));
+                location.setLatitude(cursor.getDouble(cursor.getColumnIndex("latitude")));
+                location.setLongitude(cursor.getDouble(cursor.getColumnIndex("longitude")));
+                location.setType(cursor.getString(cursor.getColumnIndex("type")));
+
+                locationList.add(location);
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        return locationList;
+    }
+
+
 }
 
 //random points
