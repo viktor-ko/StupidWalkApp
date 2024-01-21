@@ -19,9 +19,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "walking_routes.db";
     public static final String TABLE_NAME = "walking_routes";
     public static final String COLUMN_ID = "id";
-    public static final String COLUMN_LATITUDE = "latitude";
-    public static final String COLUMN_LONGITUDE = "longitude";
-    public static final String COLUMN_TYPE = "type";
+    public static final String COLUMN_ROUTE_START = "routeStart";
+    public static final String COLUMN_ROUTE_END = "routeEnd";
+    public static final String COLUMN_DISTANCE = "distance";
+    public static final String COLUMN_DURATION = "duration";
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, 1);
         }
@@ -29,9 +30,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         String createTableQuery = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " ("
                     + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    + COLUMN_LATITUDE + " REAL, "
-                    + COLUMN_LONGITUDE + " REAL, "
-                    + COLUMN_TYPE + " TEXT)";
+                    + COLUMN_ROUTE_START + " TEXT, "
+                    + COLUMN_ROUTE_END + " TEXT, "
+                    + COLUMN_DISTANCE + " REAL, "
+                    + COLUMN_DURATION + " INTEGER)";
         db.execSQL(createTableQuery);
         }
     @Override
@@ -49,11 +51,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             if (cursor.moveToFirst()) {
                 do {
                     int id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
-                    double latitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_LATITUDE));
-                    double longitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_LONGITUDE));
-                    String type = cursor.getString(cursor.getColumnIndex(COLUMN_TYPE));
+                    String routeStart = cursor.getString(cursor.getColumnIndex(COLUMN_ROUTE_START));
+                    String routeEnd = cursor.getString(cursor.getColumnIndex(COLUMN_ROUTE_END));
+                    double distance = cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE));
+                    long duration = cursor.getLong(cursor.getColumnIndex(COLUMN_DURATION));
 
-                    Log.d("DatabaseDebug", "ID: " + id + ", Latitude: " + latitude + ", Longitude: " + longitude + ", Type: " + type);
+                    Log.d("DatabaseDebug", "ID: " + id + ", Route Start: " + routeStart + ", Route End: " + routeEnd + ", Distance: " + distance + ", Duration: " + duration);
                 } while (cursor.moveToNext());
             }
         } finally {

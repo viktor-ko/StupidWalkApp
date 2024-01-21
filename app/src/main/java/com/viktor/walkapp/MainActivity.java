@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     private LatLng currentLocation;
     private DatabaseHelper dbHelper;
+    private List<LatLng> randomPoints = new ArrayList<>();
 
     @Override
     public void onMapReady(GoogleMap map) {
@@ -97,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         }
     }
+
     @SuppressLint("MissingPermission")
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -161,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         };
         locationPermissionRequest.launch(PERMISSIONS);
     }
+
     private List<LatLng> generateRandomPoints(LatLng currentLocation) {
         List<LatLng> randomPoints = new ArrayList<>();
         Random random = new Random();
@@ -178,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         double minDistanceKm = 1.0;
         double maxDistanceKm = 1.5;
 
-        insertLocation(currentLocation.latitude, currentLocation.longitude, "start");
+//        insertLocation(currentLocation.latitude, currentLocation.longitude, "Starting point");
 
         for (int i = 0; i < 3; i++) {
             double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);
@@ -189,7 +192,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (randomPoint != null) {
                 randomPoints.add(randomPoint);
 
-                insertLocation(randomPoint.latitude, randomPoint.longitude, "random");
+//                insertLocation(randomPoint.latitude, randomPoint.longitude, "End point");
 
 //        for (int i = 0; i < 3; i++) {
 //            double latOffset = random.nextDouble() * 0.01;  // 0.01 degrees is around 1 km
@@ -237,18 +240,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         return randomPoints;
     }
-    private void insertLocation(double latitude, double longitude, String type) {
+
+    public long insertLocation(String routeStart, String routeEnd, Double distance, Long duration) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
 
         ContentValues values = new ContentValues();
-        values.put(DatabaseHelper.COLUMN_LATITUDE, latitude);
-        values.put(DatabaseHelper.COLUMN_LONGITUDE, longitude);
-        values.put(DatabaseHelper.COLUMN_TYPE, type);
 
-        db.insert(DatabaseHelper.TABLE_NAME, null, values);
+        if (routeStart != null) {
+            values.put(DatabaseHelper.COLUMN_ROUTE_START, routeStart);
+        }
+        if (routeEnd != null) {
+            values.put(DatabaseHelper.COLUMN_ROUTE_END, routeEnd);
+        }
+        if (distance != null) {
+            values.put(DatabaseHelper.COLUMN_DISTANCE, distance);
+        }
+        if (duration != null) {
+            values.put(DatabaseHelper.COLUMN_DURATION, duration);
+        }
 
-        db.close();
+        return db.insert(DatabaseHelper.TABLE_NAME, null, values);
     }
+
     private LatLng getPointAtDistanceAndBearing(LatLng start, double distance, double bearing) {
         double earthRadius = 6371.0; // Radius of the Earth in kilometers
         double lat1 = Math.toRadians(start.latitude);
@@ -274,17 +287,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     + "&end=" + randomPoint.longitude + "," + randomPoint.latitude;
 
             new DownloadGeoJsonFile().execute(url);
+        }
     }
-    }
+
     private class DownloadGeoJsonFile extends AsyncTask<String, Void, GeoJsonLayer> {
+        private String geoJsonResponse;
 
         @Override
         protected GeoJsonLayer doInBackground(String... params) {
+            StringBuilder result = new StringBuilder();
             try {
                 InputStream stream = new URL(params[0]).openStream();
 
                 String line;
-                StringBuilder result = new StringBuilder();
                 BufferedReader reader = new BufferedReader(
                         new InputStreamReader(stream));
 
@@ -314,6 +329,38 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 lineStringStyle.setWidth(10f);
 
                 layer.addLayerToMap();
+
+                // Extract distance and duration from GeoJSON summary
+                try {
+                    JSONObject jsonResponse = new JSONObject(geoJsonResponse);
+                    JSONObject summaryObject = jsonResponse.optJSONObject("summary");
+
+                    if (summaryObject != null) {
+                        double distance = summaryObject.getDouble("distance");
+                        double duration = summaryObject.getDouble("duration");
+                        // Convert seconds and meters to minutes and kilometers
+                        double distanceKilometers = Math.round(distance / 1000.0 * 100.0) / 100.0;
+                        long durationMinutes = Math.round(duration / 60.0);
+
+                        // Assuming you have access to your SQLite database
+                        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+                        // Convert current location LatLng to a string (latitude,longitude)
+                        String routeStart = currentLocation.latitude + "," + currentLocation.longitude;
+                        insertLocation(routeStart, null, distanceKilometers, durationMinutes);
+
+                        // Use each random point and insert into the database
+                        for (LatLng randomPoint : randomPoints) {
+                            String routeEnd = randomPoint.latitude + "," + randomPoint.longitude;
+                            insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
+                        }
+
+                        // Close the database when done
+                        db.close();
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
