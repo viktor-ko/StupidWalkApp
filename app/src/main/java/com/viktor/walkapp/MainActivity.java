@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private GoogleMap mMap;
     private LatLng currentLocation;
+    private DatabaseHelper dbHelper;
 
     @Override
     public void onMapReady(GoogleMap map) {
@@ -103,6 +104,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        dbHelper = new DatabaseHelper(this);
 
         SupportMapFragment mapFragment = (SupportMapFragment)
                 getSupportFragmentManager().findFragmentById(R.id.map);
@@ -175,6 +178,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         double minDistanceKm = 1.0;
         double maxDistanceKm = 1.5;
 
+        insertLocation(currentLocation.latitude, currentLocation.longitude, "start");
+
         for (int i = 0; i < 3; i++) {
             double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);
             double bearing = random.nextDouble() * 360; // To avoid clustering of points and generation only on the north
@@ -183,6 +188,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             if (randomPoint != null) {
                 randomPoints.add(randomPoint);
+
+                insertLocation(randomPoint.latitude, randomPoint.longitude, "random");
 
 //        for (int i = 0; i < 3; i++) {
 //            double latOffset = random.nextDouble() * 0.01;  // 0.01 degrees is around 1 km
@@ -226,7 +233,21 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Call a method to display walking routes for these random points
         displayWalkingRoutes(currentLocation, randomPoints);
 
+        dbHelper.printDatabaseContents(); //delete
+
         return randomPoints;
+    }
+    private void insertLocation(double latitude, double longitude, String type) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(DatabaseHelper.COLUMN_LATITUDE, latitude);
+        values.put(DatabaseHelper.COLUMN_LONGITUDE, longitude);
+        values.put(DatabaseHelper.COLUMN_TYPE, type);
+
+        db.insert(DatabaseHelper.TABLE_NAME, null, values);
+
+        db.close();
     }
     private LatLng getPointAtDistanceAndBearing(LatLng start, double distance, double bearing) {
         double earthRadius = 6371.0; // Radius of the Earth in kilometers
@@ -296,66 +317,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         }
     }
-    public class LocationModel {
-
-        private int id;
-        private double latitude;
-        private double longitude;
-        private String type;
-    }
-
-    // Instantiate the DatabaseHelper
-    DatabaseHelper dbHelper = new DatabaseHelper(this);
-
-    // Get a writable database
-    SQLiteDatabase db = dbHelper.getWritableDatabase();
-
-    // Insert the start location
-    insertLocation(db, currentLocation.latitude, currentLocation.longitude, "start");
-
-// Insert random points
-    for (LatLng point : randomPoints) {
-        insertLocation(db, point.latitude, point.longitude, "random");
-    }
-// Close the database when done
-db.close();
-
-    // Method to insert a location into the database
-    private void insertLocation(SQLiteDatabase db, double latitude, double longitude, String type) {
-        ContentValues values = new ContentValues();
-        values.put("latitude", latitude);
-        values.put("longitude", longitude);
-        values.put("type", type);
-
-        db.insert("locations", null, values);
-    }
-
-    // Assuming you want to retrieve all locations
-    List<LocationModel> locations = getAllLocations(db);
-
-    // Method to get all locations from the database
-    private List<LocationModel> getAllLocations(SQLiteDatabase db) {
-        List<LocationModel> locationList = new ArrayList<>();
-
-        Cursor cursor = db.query("walking_routes", null, null, null, null, null, null);
-
-        if (cursor.moveToFirst()) {
-            do {
-                LocationModel location = new LocationModel();
-                location.setId(cursor.getInt(cursor.getColumnIndex("id")));
-                location.setLatitude(cursor.getDouble(cursor.getColumnIndex("latitude")));
-                location.setLongitude(cursor.getDouble(cursor.getColumnIndex("longitude")));
-                location.setType(cursor.getString(cursor.getColumnIndex("type")));
-
-                locationList.add(location);
-            } while (cursor.moveToNext());
-        }
-
-        cursor.close();
-        return locationList;
-    }
-
-
 }
 
 //random points
