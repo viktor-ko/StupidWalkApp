@@ -3,6 +3,7 @@ package com.viktor.walkapp;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -15,6 +16,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Pair;
 import android.view.View;
 import android.widget.Toast;
 
@@ -36,6 +38,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -83,16 +86,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         if (locationManager != null) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
             Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
             if (lastKnownLocation != null) {
-                LatLng currentLocation = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+                currentLocation = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
 
                 // Generate 3 random points and display 3 walking routes from current location
-                generateRandomPoints(currentLocation);
+                randomPoints = generateRandomPoints(currentLocation);
+
+                // Display walking routes for the generated random points
+                displayWalkingRoutes(currentLocation, randomPoints);
             } else {
                 Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
             }
@@ -132,14 +139,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     mMap.addMarker(myMarker);
                 }
             }
-//            public void onStatusChanged(String provider, int status, Bundle extras) {
-//            }
-//
-//            public void onProviderEnabled(String provider) {
-//            }
-//
-//            public void onProviderDisabled(String provider) {
-//            }
         };
 
         ActivityResultLauncher<String[]> locationPermissionRequest = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -164,6 +163,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationPermissionRequest.launch(PERMISSIONS);
     }
 
+    public void onListViewButtonClick(View view) {
+        Intent intent = new Intent(this, RoutesActivity.class);
+        startActivity(intent);
+    }
+
     private List<LatLng> generateRandomPoints(LatLng currentLocation) {
         List<LatLng> randomPoints = new ArrayList<>();
         Random random = new Random();
@@ -181,8 +185,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         double minDistanceKm = 1.0;
         double maxDistanceKm = 1.5;
 
-//        insertLocation(currentLocation.latitude, currentLocation.longitude, "Starting point");
-
         for (int i = 0; i < 3; i++) {
             double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);
             double bearing = random.nextDouble() * 360; // To avoid clustering of points and generation only on the north
@@ -191,19 +193,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             if (randomPoint != null) {
                 randomPoints.add(randomPoint);
-
-//                insertLocation(randomPoint.latitude, randomPoint.longitude, "End point");
-
-//        for (int i = 0; i < 3; i++) {
-//            double latOffset = random.nextDouble() * 0.01;  // 0.01 degrees is around 1 km
-//            double lngOffset = random.nextDouble() * 0.01;
-//
-//            LatLng randomPoint = new LatLng(
-//                    currentLocation.latitude + latOffset,
-//                    currentLocation.longitude + lngOffset
-//            );
-//
-//            randomPoints.add(randomPoint);
 
                 // Assign markers based on index
                 String markerResourceName;
@@ -235,8 +224,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // Call a method to display walking routes for these random points
         displayWalkingRoutes(currentLocation, randomPoints);
-
-        dbHelper.printDatabaseContents(); //delete
 
         return randomPoints;
     }
@@ -286,20 +273,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     + "&start=" + currentLocation.longitude + "," + currentLocation.latitude
                     + "&end=" + randomPoint.longitude + "," + randomPoint.latitude;
 
-            new DownloadGeoJsonFile().execute(url);
+            new DownloadGeoJsonFile(randomPoint).execute(url);
         }
     }
 
-    private class DownloadGeoJsonFile extends AsyncTask<String, Void, GeoJsonLayer> {
+    private class DownloadGeoJsonFile extends AsyncTask<String, Void, Pair<GeoJsonLayer, JSONObject>> {
         private String geoJsonResponse;
+        private LatLng randomPoint;
+
+        public DownloadGeoJsonFile(LatLng randomPoint) {
+            this.randomPoint = randomPoint;
+        }
 
         @Override
-        protected GeoJsonLayer doInBackground(String... params) {
-            StringBuilder result = new StringBuilder();
+        protected Pair<GeoJsonLayer, JSONObject> doInBackground(String... params) {
             try {
                 InputStream stream = new URL(params[0]).openStream();
 
                 String line;
+                StringBuilder result = new StringBuilder();
                 BufferedReader reader = new BufferedReader(
                         new InputStreamReader(stream));
 
@@ -310,58 +302,84 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 reader.close();
                 stream.close();
 
-                return new GeoJsonLayer(mMap, new JSONObject(result.toString()));
+                if (result.length() > 0) {
+                    JSONObject jsonObject = new JSONObject(result.toString());
+                    return new Pair<>(new GeoJsonLayer(mMap, jsonObject), jsonObject);
+                } else {
+                    Log.e("mLogTag", "Empty or invalid JSON response");
+                    return null;
+                }
             } catch (IOException e) {
                 Log.e("mLogTag", "GeoJSON file could not be read");
             } catch (JSONException e) {
-                Log.e("mLogTag",
-                        "GeoJSON file could not be converted to a JSONObject");
+                Log.e("mLogTag", "Error parsing JSON response");
             }
             return null;
         }
 
         @Override
-        protected void onPostExecute(GeoJsonLayer layer) {
-            if (layer != null) {
-                GeoJsonLineStringStyle lineStringStyle =
-                        layer.getDefaultLineStringStyle();
-                lineStringStyle.setColor(Color.parseColor("#07E9CD"));
-                lineStringStyle.setWidth(10f);
+        protected void onPostExecute(Pair<GeoJsonLayer, JSONObject> resultPair) {
+            if (resultPair != null) {
+                GeoJsonLayer layer = resultPair.first;
+                JSONObject jsonObject = resultPair.second;
 
-                layer.addLayerToMap();
+                if (layer != null) {
+                    GeoJsonLineStringStyle lineStringStyle = layer.getDefaultLineStringStyle();
+                    lineStringStyle.setColor(Color.parseColor("#07E9CD"));
+                    lineStringStyle.setWidth(10f);
 
-                // Extract distance and duration from GeoJSON summary
-                try {
-                    JSONObject jsonResponse = new JSONObject(geoJsonResponse);
-                    JSONObject summaryObject = jsonResponse.optJSONObject("summary");
+                    layer.addLayerToMap();
 
-                    if (summaryObject != null) {
-                        double distance = summaryObject.getDouble("distance");
-                        double duration = summaryObject.getDouble("duration");
-                        // Convert seconds and meters to minutes and kilometers
-                        double distanceKilometers = Math.round(distance / 1000.0 * 100.0) / 100.0;
-                        long durationMinutes = Math.round(duration / 60.0);
+                    // Access GeoJSON structure
+                    try {
+                        JSONArray features = jsonObject.getJSONArray("features");
 
-                        // Assuming you have access to your SQLite database
-                        SQLiteDatabase db = dbHelper.getWritableDatabase();
+                        if (features.length() > 0) {
+                                JSONObject feature = features.getJSONObject(0);
+                                JSONObject properties = feature.optJSONObject("properties");
 
-                        // Convert current location LatLng to a string (latitude,longitude)
-                        String routeStart = currentLocation.latitude + "," + currentLocation.longitude;
-                        insertLocation(routeStart, null, distanceKilometers, durationMinutes);
+                                if (properties != null) {
+                                    JSONObject summary = properties.optJSONObject("summary");
 
-                        // Use each random point and insert into the database
-                        for (LatLng randomPoint : randomPoints) {
-                            String routeEnd = randomPoint.latitude + "," + randomPoint.longitude;
-                            insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
+                                    if (summary != null) {
+
+                                        // Extract route distance (meters) and duration (seconds) from GeoJSON
+                                        double distance = summary.getDouble("distance");
+                                        double duration = summary.getDouble("duration");
+
+                                        //Convert meters and seconds to kilometers and minutes
+                                        double distanceKilometers = Math.round(distance / 1000.0 * 100.0) / 100.0;
+                                        long durationMinutes = Math.round(duration / 60.0);
+
+                                        // Convert current location LatLng to a string (latitude,longitude)
+                                        String routeStart = currentLocation.latitude + "," + currentLocation.longitude;
+
+                                        // Convert random point LatLng to a string (latitude,longitude)
+                                        String routeEnd = randomPoint.latitude + "," + randomPoint.longitude;
+
+                                        // Insert data into the database
+                                        insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
+                                    } else {
+                                        Log.e("mLogTag", "No 'summary' object found in properties");
+                                    }
+                                } else {
+                                    Log.e("mLogTag", "No 'properties' object found in feature");
+                                }
+                        } else {
+                            Log.e("mLogTag", "No features found in GeoJSON");
                         }
-
-                        // Close the database when done
-                        db.close();
+                    } catch (JSONException e) {
+                        Log.e("mLogTag", "Error extracting summary information");
+                        e.printStackTrace();
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                } else {
+                    Log.e("mLogTag", "GeoJsonLayer is null");
                 }
+            } else {
+                Log.e("mLogTag", "AsyncTask resultPair is null");
+
             }
+                dbHelper.printDatabaseContents(); //delete
         }
     }
 }

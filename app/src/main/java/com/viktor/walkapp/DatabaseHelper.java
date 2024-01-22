@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.content.ContentValues;
+import android.database.sqlite.SQLiteQueryBuilder;
+import android.provider.BaseColumns;
 import android.util.Log;
 
 import java.io.File;
@@ -16,7 +18,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
-    public static final String DATABASE_NAME = "walking_routes.db";
+    public static final String DATABASE_NAME = "walking_routes_v4.db";
     public static final String TABLE_NAME = "walking_routes";
     public static final String COLUMN_ID = "id";
     public static final String COLUMN_ROUTE_START = "routeStart";
@@ -42,8 +44,58 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    public static final class DatabaseContract {
+        private DatabaseContract() {
+        }
+        public static class RouteEntry implements BaseColumns {
+            public static final String TABLE_NAME = "walking_routes";
+            public static final String COLUMN_ID = "ID";
+            public static final String COLUMN_DISTANCE = "distance";
+            public static final String COLUMN_DURATION = "duration";
+        }
+    }
+
+    public Cursor getAllRoutes() {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
+        queryBuilder.setTables(DatabaseContract.RouteEntry.TABLE_NAME);
+
+        // Query the database to get the column names
+        Cursor cursor = db.rawQuery("PRAGMA table_info(" + DatabaseContract.RouteEntry.TABLE_NAME + ")", null);
+
+        // Calculate the total number of columns
+        int totalColumns = cursor.getCount();
+
+        // Initialize the projection array
+        String[] projection = new String[totalColumns];
+
+        // Construct the projection array dynamically
+        for (int i = 0; i < totalColumns; i++) {
+            projection[i] = "COLUMN" + (i + 1);
+        }
+
+        // Close the cursor used to get column names
+        cursor.close();
+
+        // Execute the query
+        Cursor resultCursor = queryBuilder.query(
+                db,
+                projection,
+                null,
+                null,
+                null,
+                null,
+                DatabaseContract.RouteEntry.COLUMN_ID // Sort by COLUMN_ID
+        );
+
+        return resultCursor;
+    }
+
     // delete later
     public void printDatabaseContents() {
+        Log.d("DatabaseDebug", "Printing database contents...");
+
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_NAME, null);
 
@@ -58,11 +110,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                     Log.d("DatabaseDebug", "ID: " + id + ", Route Start: " + routeStart + ", Route End: " + routeEnd + ", Distance: " + distance + ", Duration: " + duration);
                 } while (cursor.moveToNext());
+            } else {
+                Log.d("DatabaseDebug", "No data in the database.");
             }
         } finally {
             cursor.close();
             db.close();
         }
     }
+
 }
 
