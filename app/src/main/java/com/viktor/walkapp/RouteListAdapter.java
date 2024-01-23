@@ -5,8 +5,9 @@ import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CursorAdapter;
 import android.widget.TextView;
+
+import androidx.cursoradapter.widget.CursorAdapter;
 
 public class RouteListAdapter extends CursorAdapter {
 
@@ -21,13 +22,17 @@ public class RouteListAdapter extends CursorAdapter {
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-        TextView textViewRoute = view.findViewById(R.id.textViewRoute);
+        TextView textId = view.findViewById(R.id.text_id);
+        TextView textDistance = view.findViewById(R.id.text_distance);
+        TextView textDuration = view.findViewById(R.id.text_duration);
 
-        // Extract data from the cursor and set it to the TextView
-        String routeText = "Route " + cursor.getInt(cursor.getColumnIndex(DatabaseHelper.DatabaseContract.RouteEntry.COLUMN_ID)) +
-                ": " + cursor.getDouble(cursor.getColumnIndex(DatabaseHelper.DatabaseContract.RouteEntry.COLUMN_DISTANCE)) + " km " +
-                cursor.getLong(cursor.getColumnIndex(DatabaseHelper.DatabaseContract.RouteEntry.COLUMN_DURATION)) + " min";
+        // Extract data from the cursor and set it to the TextViews
+        int id = cursor.getInt(cursor.getColumnIndex("id"));
+        double distance = cursor.getDouble(cursor.getColumnIndex("distance"));
+        long duration = cursor.getLong(cursor.getColumnIndex("duration"));
 
-        textViewRoute.setText(routeText);
+        textId.setText("Route ID: " + id);
+        textDistance.setText("Distance: " + distance + " km");
+        textDuration.setText("Walking time: " + duration + " min");
     }
 }

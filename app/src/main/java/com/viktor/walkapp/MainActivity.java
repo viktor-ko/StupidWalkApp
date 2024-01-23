@@ -211,7 +211,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         break;
                 }
 
-                // Add markers for random points with individual PNG files
+                // Add markers for random points from PNG files
                 int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
                 if (mMap != null) {
                     mMap.addMarker(new MarkerOptions()
@@ -250,7 +250,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private LatLng getPointAtDistanceAndBearing(LatLng start, double distance, double bearing) {
-        double earthRadius = 6371.0; // Radius of the Earth in kilometers
+        double earthRadius = 6371.0; // Radius of the Earth in km
         double lat1 = Math.toRadians(start.latitude);
         double lon1 = Math.toRadians(start.longitude);
 
@@ -278,7 +278,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private class DownloadGeoJsonFile extends AsyncTask<String, Void, Pair<GeoJsonLayer, JSONObject>> {
-        private String geoJsonResponse;
         private LatLng randomPoint;
 
         public DownloadGeoJsonFile(LatLng randomPoint) {
@@ -298,7 +297,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 while ((line = reader.readLine()) != null) {
                     result.append(line);
                 }
-
                 reader.close();
                 stream.close();
 
@@ -383,116 +381,3 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 }
-
-//random points
-//    double lat_min = -90;
-//    double lat_max = 90;
-//    double lng_min = -180;
-//    double lng_max = 180;
-//
-//    Random r = new Random();
-//    double random_lat = lat_min + (lat_max - lat_min) * r.nextDouble();
-//    double random_lng = lng_min + (lng_max - lng_min) * r.nextDouble();
-//
-//    Location random_location = new Location("");
-//random_location.setLatitude(random_lat);
-//        random_location.setLongitude(random_lng);
-
-
-
-
-//public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
-//
-//    private GoogleMap mMap;
-//    private FusedLocationProviderClient fusedLocationProviderClient;
-//
-//    ActivityResultLauncher<String[]> locationPermissionRequest;
-//
-//    @SuppressLint("MissingPermission")
-//    @RequiresApi(api = Build.VERSION_CODES.N)
-//    @Override
-//    protected void onCreate(Bundle savedInstanceState) {
-//
-//        super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
-//
-//        SupportMapFragment mapFragment = (SupportMapFragment)
-//                getSupportFragmentManager().findFragmentById(R.id.map);
-//
-//        mapFragment.getMapAsync(this);
-//
-//        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-//
-//        locationPermissionRequest = registerForActivityResult(
-//                new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-//                    Boolean fineLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false);
-//                    Boolean coarseLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false);
-//
-//                    if ((fineLocationGranted != null && fineLocationGranted) || (coarseLocationGranted != null && coarseLocationGranted)) {
-//                        mMap.setMyLocationEnabled(true);
-//                        mMap.getUiSettings().setMyLocationButtonEnabled(true);
-//                    } else {
-//                        Toast.makeText(this,
-//                                "Location cannot be obtained due to missing permission.",
-//                                Toast.LENGTH_LONG).show();
-//                    }
-//                }
-//        );
-//    }
-//
-//    @Override
-//    public void onMapReady(GoogleMap map) {
-//        mMap = map;
-//
-//        mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-//
-//        mMap.getUiSettings().setZoomControlsEnabled(true);
-//
-//        mMap.getUiSettings().setMapToolbarEnabled(true);
-//
-//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            // TODO: Consider calling
-//            //    ActivityCompat#requestPermissions
-//            // here to request the missing permissions, and then overriding
-//            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-//            //                                          int[] grantResults)
-//            // to handle the case where the user grants the permission. See the documentation
-//            // for ActivityCompat#requestPermissions for more details.
-//            return;
-//        }
-//        fusedLocationProviderClient.getLastLocation()
-//                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
-//                    @Override
-//                    public void onSuccess(Location location) {
-//                        LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-//                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16));
-//
-//                        MarkerOptions myMarker = new MarkerOptions()
-//                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.star))
-//                                .position(currentLocation)
-//                                .anchor(0.5f, 1)
-//                                .alpha(0.7f)
-//                                .title("Start");
-//                        mMap.addMarker(myMarker);
-//                        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-//                            @Override
-//                            public void onMapClick(LatLng newPos) {
-//                                MarkerOptions clickMarker = new MarkerOptions().position(newPos);
-//                                mMap.addMarker(clickMarker);
-//                                String url = "https://api.openrouteservice.org/v2/directions"
-//                                        + "foot-walking"
-//                                        + "?api_key=5b3ce3597851110001cf624860d4a9b68f9540bb8a7bd10b7055866e"
-//                                        + "&start="
-//                                        + myMarker.getPosition().longitude + ","
-//                                        + myMarker.getPosition().latitude
-//                                        + "&end="
-//                                        + clickMarker.getPosition().longitude + ","
-//                                        + clickMarker.getPosition().latitude;
-//                                new DownloadGeoJsonFile().execute(url);
-//                            }
-//                        });
-//                    }
-//                });
-//    }
-//
-//

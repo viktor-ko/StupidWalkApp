@@ -1,49 +1,57 @@
 package com.viktor.walkapp;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cursoradapter.widget.CursorAdapter;
 
+import android.content.Context;
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.database.Cursor;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ListView;
-
-import java.io.IOException;
+import android.widget.SimpleCursorAdapter;
+import android.widget.TextView;
 
 public class RoutesActivity extends AppCompatActivity {
     ListView listView;
     DatabaseHelper dbHelper;
     SQLiteDatabase database;
     Cursor cursor;
+    RouteListAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_routes);
 
-        listView = findViewById(R.id.list_item_route);
+        listView = findViewById(R.id.listViewRoutes);
         dbHelper = new DatabaseHelper(this);
 
         try {
-            dbHelper.createDataBase();
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
+            dbHelper.getWritableDatabase();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        database = dbHelper.getDataBase();
-        cursor = database.rawQuery("SELECT * FROM " + DatabaseHelper.TABLE_NAME, null);
+        database = dbHelper.getWritableDatabase();
+        cursor = database.rawQuery("SELECT id as _id, * FROM " + DatabaseHelper.TABLE_NAME, null);
 
-        String[] fromColumns = {DatabaseHelper.COLUMN_ID, DatabaseHelper.COLUMN_DISTANCE, DatabaseHelper.COLUMN_DURATION};
-        int[] toViews = {R.id.text_id, R.id.text_distance, R.id.text_duration};
-
-        SimpleCursorAdapter adapter = new SimpleCursorAdapter(
-                this,
-                R.layout.activity_routes,
-                cursor,
-                fromColumns,
-                toViews,
-                0
-        );
-
+        adapter = new RouteListAdapter(this, cursor);
         listView.setAdapter(adapter);
+
+        Button buttonMap = findViewById(R.id.buttonMap);
+        buttonMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(RoutesActivity.this, MainActivity.class);
+                startActivity(intent);
+            }
+        });
     }
 }
+
+
