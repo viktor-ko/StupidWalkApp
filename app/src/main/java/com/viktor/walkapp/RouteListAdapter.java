@@ -22,16 +22,16 @@ public class RouteListAdapter extends CursorAdapter {
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-        TextView textId = view.findViewById(R.id.text_id);
+        TextView textAddress = view.findViewById(R.id.text_address);
         TextView textDistance = view.findViewById(R.id.text_distance);
         TextView textDuration = view.findViewById(R.id.text_duration);
 
-        // Extract data from the cursor and set it to the TextViews
-        int id = cursor.getInt(cursor.getColumnIndex("id"));
+        // Extract data from the cursor and put it to the TextViews
+        String address = cursor.getString(cursor.getColumnIndex("address"));
         double distance = cursor.getDouble(cursor.getColumnIndex("distance"));
         long duration = cursor.getLong(cursor.getColumnIndex("duration"));
 
-        textId.setText("Route ID: " + id);
+        textAddress.setText(address);
         textDistance.setText("Distance: " + distance + " km");
         textDuration.setText("Walking time: " + duration + " min");
     }

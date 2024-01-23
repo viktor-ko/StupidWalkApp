@@ -4,7 +4,7 @@
     android:layout_height="wrap_content">
 
     <TextView
-        android:id="@+id/text_id"
+        android:id="@+id/text_address"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="8dp"
@@ -15,7 +15,7 @@
         android:id="@+id/text_distance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/text_id"
+        android:layout_below="@id/text_address"
         android:padding="8dp" />
 
     <TextView

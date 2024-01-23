@@ -9,6 +9,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -49,6 +51,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 import android.widget.Button;
@@ -58,7 +61,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     private LatLng currentLocation;
     private DatabaseHelper dbHelper;
-    private List<LatLng> randomPoints = new ArrayList<>();
 
     @Override
     public void onMapReady(GoogleMap map) {
@@ -67,18 +69,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
 
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng newPos) {
-                Button main_button = findViewById(R.id.main_button);
-                main_button.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        generateRandomPoints(currentLocation);
-                    }
-                });
-            }
-        });
+
     }
 
     public void onWalkButtonClick(View view) {
@@ -95,10 +86,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (lastKnownLocation != null) {
                 currentLocation = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
 
-                // Generate 3 random points and display 3 walking routes from current location
-                randomPoints = generateRandomPoints(currentLocation);
+                // Generate 3 random points within 1-1.5 km from current location
+                List<LatLng> randomPoints = generateRandomPoints(currentLocation);
 
-                // Display walking routes for the generated random points
+                // Display 3 walking routes from current location to the generated random points
                 displayWalkingRoutes(currentLocation, randomPoints);
             } else {
                 Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
@@ -128,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onLocationChanged(Location location) {
                 if (location != null) {
                     LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 14));
 
                     MarkerOptions myMarker = new MarkerOptions()
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.location_marker))
@@ -161,6 +152,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Manifest.permission.ACCESS_COARSE_LOCATION
         };
         locationPermissionRequest.launch(PERMISSIONS);
+
     }
 
     public void onListViewButtonClick(View view) {
@@ -172,6 +164,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         List<LatLng> randomPoints = new ArrayList<>();
         Random random = new Random();
 
+        //clear map from all markers
         mMap.clear();
 
         MarkerOptions myMarker = new MarkerOptions()
@@ -187,44 +180,39 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         for (int i = 0; i < 3; i++) {
             double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);
-            double bearing = random.nextDouble() * 360; // To avoid clustering of points and generation only on the north
+            double bearing = random.nextDouble() * 360; // to avoid clustering of points and generation only on the north from current location
 
             LatLng randomPoint = getPointAtDistanceAndBearing(currentLocation, distance, bearing);
 
             if (randomPoint != null) {
                 randomPoints.add(randomPoint);
 
-                // Assign markers based on index
-                String markerResourceName;
-                switch (i) {
-                    case 0:
-                        markerResourceName = "one";
-                        break;
-                    case 1:
-                        markerResourceName = "two";
-                        break;
-                    case 2:
-                        markerResourceName = "three";
-                        break;
-                    default:
-                        markerResourceName = "one"; // Default to "one" if unexpected index
-                        break;
-                }
-
-                // Add markers for random points from PNG files
-                int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
-                if (mMap != null) {
-                    mMap.addMarker(new MarkerOptions()
-                            .position(randomPoint)
-                            .icon(BitmapDescriptorFactory.fromResource(markerResourceId)));
-                }
+//                // Assign markers based on index
+//                String markerResourceName;
+//                switch (i) {
+//                    case 0:
+//                        markerResourceName = "one";
+//                        break;
+//                    case 1:
+//                        markerResourceName = "two";
+//                        break;
+//                    case 2:
+//                        markerResourceName = "three";
+//                        break;
+//                    default:
+//                        markerResourceName = "one"; // Default to "one" if unexpected index
+//                        break;
+//                }
+//
+//                // Add markers for random points from PNG files
+//                int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
+//                if (mMap != null) {
+                mMap.addMarker(new MarkerOptions()
+                        .position(randomPoint)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.point_marker)));
 
             }
         }
-
-        // Call a method to display walking routes for these random points
-        displayWalkingRoutes(currentLocation, randomPoints);
-
         return randomPoints;
     }
 
@@ -341,22 +329,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                                     if (summary != null) {
 
-                                        // Extract route distance (meters) and duration (seconds) from GeoJSON
+                                        //extract route distance (meters) and duration (seconds) from GeoJSON
                                         double distance = summary.getDouble("distance");
                                         double duration = summary.getDouble("duration");
 
-                                        //Convert meters and seconds to kilometers and minutes
+                                        //convert meters and seconds to kilometers and minutes
                                         double distanceKilometers = Math.round(distance / 1000.0 * 100.0) / 100.0;
                                         long durationMinutes = Math.round(duration / 60.0);
 
-                                        // Convert current location LatLng to a string (latitude,longitude)
+                                        //convert current location LatLng to a string (latitude,longitude)
                                         String routeStart = currentLocation.latitude + "," + currentLocation.longitude;
 
-                                        // Convert random point LatLng to a string (latitude,longitude)
+                                        //convert random point LatLng to a string (latitude,longitude)
                                         String routeEnd = randomPoint.latitude + "," + randomPoint.longitude;
 
-                                        // Insert data into the database
-                                        insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
+                                        //insert data into the database
+                                        long rowId =insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
+
+                                        //get address for the random point (reverse geocoding)
+                                        resolveAndInsertAddress(randomPoint, rowId);
+
                                     } else {
                                         Log.e("mLogTag", "No 'summary' object found in properties");
                                     }
@@ -379,5 +371,42 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
                 dbHelper.printDatabaseContents(); //delete
         }
+    }
+
+    private void resolveAndInsertAddress(LatLng randomPoint, long rowId) {
+        Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
+        try {
+            List<Address> addressList = geocoder.getFromLocation(randomPoint.latitude, randomPoint.longitude, 1);
+            if (addressList != null && !addressList.isEmpty()) {
+                Address address = addressList.get(0);
+                StringBuilder addressStringBuilder = new StringBuilder();
+
+                //append each address line to the StringBuilder
+                for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
+                    addressStringBuilder.append(address.getAddressLine(i));
+                    if (i < address.getMaxAddressLineIndex()) {
+                        addressStringBuilder.append(", ");
+                    }
+                }
+
+                String addressString = addressStringBuilder.toString();
+                //update the address in the database
+                updateAddress(rowId, addressString);
+            } else {
+                //update with no address found
+                updateAddress(rowId, "No address found");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            //update with error message
+            updateAddress(rowId, "Error getting address");
+        }
+    }
+
+    private void updateAddress(long rowId, String address) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DatabaseHelper.COLUMN_ADDRESS, address);
+        db.update(DatabaseHelper.TABLE_NAME, values, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(rowId)});
     }
 }

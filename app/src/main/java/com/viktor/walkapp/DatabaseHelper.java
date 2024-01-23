@@ -25,6 +25,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ROUTE_END = "routeEnd";
     public static final String COLUMN_DISTANCE = "distance";
     public static final String COLUMN_DURATION = "duration";
+    public static final String COLUMN_ADDRESS = "address";
+
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, 1);
         }
@@ -34,6 +36,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                     + COLUMN_ROUTE_START + " TEXT, "
                     + COLUMN_ROUTE_END + " TEXT, "
+                    + COLUMN_ADDRESS + " TEXT, "
                     + COLUMN_DISTANCE + " REAL, "
                     + COLUMN_DURATION + " INTEGER)";
         db.execSQL(createTableQuery);
@@ -57,10 +60,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     int id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
                     String routeStart = cursor.getString(cursor.getColumnIndex(COLUMN_ROUTE_START));
                     String routeEnd = cursor.getString(cursor.getColumnIndex(COLUMN_ROUTE_END));
+                    String address = cursor.getString(cursor.getColumnIndex(COLUMN_ADDRESS));
                     double distance = cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE));
                     long duration = cursor.getLong(cursor.getColumnIndex(COLUMN_DURATION));
 
-                    Log.d("DatabaseDebug", "ID: " + id + ", Route Start: " + routeStart + ", Route End: " + routeEnd + ", Distance: " + distance + ", Duration: " + duration);
+                    Log.d("DatabaseDebug", "ID: " + id + ", Route Start: " + routeStart + ", Route End: " + routeEnd + "Address: " + address + ", Distance: " + distance + ", Duration: " + duration);
                 } while (cursor.moveToNext());
             } else {
                 Log.d("DatabaseDebug", "No data in the database.");
