@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
+        mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style));
     }
     //button STUPID WALK
     public void onWalkButtonClick(View view) {
@@ -324,11 +325,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 double distanceKilometers = Math.round(distance / 1000.0 * 100.0) / 100.0;
                 long durationMinutes = Math.round(duration / 60.0);
 
-                //convert current location LatLng to a string (latitude,longitude)
-                String routeStart = currentLocation.latitude + "," + currentLocation.longitude;
+                //convert current location LatLng to a string (latitude, longitude)
+                String routeStart = currentLocation.latitude + ", " + currentLocation.longitude;
 
                 //convert random point LatLng to a string (latitude,longitude)
-                String routeEnd = randomPoint.latitude + "," + randomPoint.longitude;
+                String routeEnd = randomPoint.latitude + ", " + randomPoint.longitude;
 
                 //insert data into the database and gets the row ID
                 long rowId = insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
