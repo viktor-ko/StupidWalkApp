@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">WalkApp</string>
+    <string name="app_name">Stupid Walk</string>
     <string name="main_button">STUPID WALK</string>
     <string name="list_view">List View</string>
     <string name="map">Map</string>
