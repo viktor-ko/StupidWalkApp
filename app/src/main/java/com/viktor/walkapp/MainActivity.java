@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.content.Context;
@@ -54,10 +53,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-import android.widget.Button;
-
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
-
     private GoogleMap mMap;
     private LatLng currentLocation;
     private DatabaseHelper dbHelper;
@@ -68,10 +64,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
-
-
     }
-
+    //button STUPID WALK
     public void onWalkButtonClick(View view) {
         // Get the current location using LocationManager
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -95,6 +89,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+    //button List view
+    public void onListViewButtonClick(View view) {
+        Intent intent = new Intent(this, RoutesActivity.class);
+        startActivity(intent);
     }
 
     @SuppressLint("MissingPermission")
@@ -155,11 +154,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
-    public void onListViewButtonClick(View view) {
-        Intent intent = new Intent(this, RoutesActivity.class);
-        startActivity(intent);
-    }
-
+    //generate 3 random points within walking distance from current location
     private List<LatLng> generateRandomPoints(LatLng currentLocation) {
         List<LatLng> randomPoints = new ArrayList<>();
         Random random = new Random();
@@ -167,6 +162,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         //clear map from all markers
         mMap.clear();
 
+        //add marker for the current location
         MarkerOptions myMarker = new MarkerOptions()
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.location_marker))
                 .position(currentLocation)
@@ -175,18 +171,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .title("Start walking!");
         mMap.addMarker(myMarker);
 
+        //defining min and max distance from current location
+        //to ensure the walk will be no less than ~15 min, but no longer than ~30 min
         double minDistanceKm = 1.0;
         double maxDistanceKm = 1.5;
 
+        //Alternative method of generation of random coordinates - instead of generating random coordinate,
+        //now I generate random angle from current location and random distance (between 1-1.5 km)
+        //Used due to clustering of points and generation only on the north from current location with previous method
         for (int i = 0; i < 3; i++) {
-            double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);
-            double bearing = random.nextDouble() * 360; // to avoid clustering of points and generation only on the north from current location
+            double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);// get random distance within the specified range
+            double bearing = random.nextDouble() * 360; // adding random angle
 
+            //get new random point based on the distance and bearing
             LatLng randomPoint = getPointAtDistanceAndBearing(currentLocation, distance, bearing);
 
-            if (randomPoint != null) {
-                randomPoints.add(randomPoint);
-
+            //add random points to the list
+            randomPoints.add(randomPoint);
 //                // Assign markers based on index
 //                String markerResourceName;
 //                switch (i) {
@@ -207,52 +208,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 //                // Add markers for random points from PNG files
 //                int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
 //                if (mMap != null) {
-                mMap.addMarker(new MarkerOptions()
-                        .position(randomPoint)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.point_marker)));
 
-            }
+            //add marker for each random point
+            mMap.addMarker(new MarkerOptions()
+                    .position(randomPoint)
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.point_marker)));
         }
         return randomPoints;
     }
-
-    public long insertLocation(String routeStart, String routeEnd, Double distance, Long duration) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-
-        ContentValues values = new ContentValues();
-
-        if (routeStart != null) {
-            values.put(DatabaseHelper.COLUMN_ROUTE_START, routeStart);
-        }
-        if (routeEnd != null) {
-            values.put(DatabaseHelper.COLUMN_ROUTE_END, routeEnd);
-        }
-        if (distance != null) {
-            values.put(DatabaseHelper.COLUMN_DISTANCE, distance);
-        }
-        if (duration != null) {
-            values.put(DatabaseHelper.COLUMN_DURATION, duration);
-        }
-
-        return db.insert(DatabaseHelper.TABLE_NAME, null, values);
-    }
-
+    //calculate new point based on starting point, distance, and bearing
     private LatLng getPointAtDistanceAndBearing(LatLng start, double distance, double bearing) {
-        double earthRadius = 6371.0; // Radius of the Earth in km
+        double earthRadius = 6371.0; //Earth radius in km
+        //convert lat long to radians
         double lat1 = Math.toRadians(start.latitude);
         double lon1 = Math.toRadians(start.longitude);
 
+        //calculate new latitude using Haversine formula - "very accurate way of computing distances
+        //between two points on the surface of a sphere using the latitude and longitude of the two points,
+        //more useful for small angles and distances."
         double lat2 = Math.asin(Math.sin(lat1) * Math.cos(distance / earthRadius) +
                 Math.cos(lat1) * Math.sin(distance / earthRadius) * Math.cos(Math.toRadians(bearing)));
         double lon2 = lon1 + Math.atan2(Math.sin(Math.toRadians(bearing)) * Math.sin(distance / earthRadius) * Math.cos(lat1),
                 Math.cos(distance / earthRadius) - Math.sin(lat1) * Math.sin(lat2));
 
+        //convert back to degrees
         lat2 = Math.toDegrees(lat2);
         lon2 = Math.toDegrees(lon2);
 
         return new LatLng(lat2, lon2);
     }
 
+    //get the routes from current location to generated random points using openrouteservice API
     private void displayWalkingRoutes(LatLng currentLocation, List<LatLng> randomPoints) {
         for (LatLng randomPoint : randomPoints) {
             String url = "https://api.openrouteservice.org/v2/directions"
@@ -264,7 +250,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             new DownloadGeoJsonFile(randomPoint).execute(url);
         }
     }
-
+    //downloads geojson route file and parse it to get distance and summary information
     private class DownloadGeoJsonFile extends AsyncTask<String, Void, Pair<GeoJsonLayer, JSONObject>> {
         private LatLng randomPoint;
 
@@ -305,74 +291,73 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         @Override
         protected void onPostExecute(Pair<GeoJsonLayer, JSONObject> resultPair) {
-            if (resultPair != null) {
-                GeoJsonLayer layer = resultPair.first;
-                JSONObject jsonObject = resultPair.second;
-
-                if (layer != null) {
-                    GeoJsonLineStringStyle lineStringStyle = layer.getDefaultLineStringStyle();
-                    lineStringStyle.setColor(Color.parseColor("#07E9CD"));
-                    lineStringStyle.setWidth(10f);
-
-                    layer.addLayerToMap();
-
-                    // Access GeoJSON structure
-                    try {
-                        JSONArray features = jsonObject.getJSONArray("features");
-
-                        if (features.length() > 0) {
-                                JSONObject feature = features.getJSONObject(0);
-                                JSONObject properties = feature.optJSONObject("properties");
-
-                                if (properties != null) {
-                                    JSONObject summary = properties.optJSONObject("summary");
-
-                                    if (summary != null) {
-
-                                        //extract route distance (meters) and duration (seconds) from GeoJSON
-                                        double distance = summary.getDouble("distance");
-                                        double duration = summary.getDouble("duration");
-
-                                        //convert meters and seconds to kilometers and minutes
-                                        double distanceKilometers = Math.round(distance / 1000.0 * 100.0) / 100.0;
-                                        long durationMinutes = Math.round(duration / 60.0);
-
-                                        //convert current location LatLng to a string (latitude,longitude)
-                                        String routeStart = currentLocation.latitude + "," + currentLocation.longitude;
-
-                                        //convert random point LatLng to a string (latitude,longitude)
-                                        String routeEnd = randomPoint.latitude + "," + randomPoint.longitude;
-
-                                        //insert data into the database
-                                        long rowId =insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
-
-                                        //get address for the random point (reverse geocoding)
-                                        resolveAndInsertAddress(randomPoint, rowId);
-
-                                    } else {
-                                        Log.e("mLogTag", "No 'summary' object found in properties");
-                                    }
-                                } else {
-                                    Log.e("mLogTag", "No 'properties' object found in feature");
-                                }
-                        } else {
-                            Log.e("mLogTag", "No features found in GeoJSON");
-                        }
-                    } catch (JSONException e) {
-                        Log.e("mLogTag", "Error extracting summary information");
-                        e.printStackTrace();
-                    }
-                } else {
-                    Log.e("mLogTag", "GeoJsonLayer is null");
-                }
-            } else {
+            if (resultPair == null) {
                 Log.e("mLogTag", "AsyncTask resultPair is null");
-
+                return;
             }
-                dbHelper.printDatabaseContents(); //delete
+
+            GeoJsonLayer layer = resultPair.first;
+            JSONObject jsonObject = resultPair.second;
+
+            if (layer == null) {
+                Log.e("mLogTag", "GeoJsonLayer is null");
+            }
+            // styling and adding geojson to the map
+            GeoJsonLineStringStyle lineStringStyle = layer.getDefaultLineStringStyle();
+            lineStringStyle.setColor(Color.parseColor("#07E9CD"));
+            lineStringStyle.setWidth(10f);
+
+            layer.addLayerToMap();
+
+            // Access GeoJSON structure
+            try {
+                JSONArray features = jsonObject.getJSONArray("features");
+                JSONObject feature = features.getJSONObject(0);
+                JSONObject properties = feature.optJSONObject("properties");
+                JSONObject summary = properties.optJSONObject("summary");
+
+                //extract route distance (meters) and duration (seconds) from GeoJSON
+                double distance = summary.getDouble("distance");
+                double duration = summary.getDouble("duration");
+
+                //convert meters and seconds to kilometers and minutes
+                double distanceKilometers = Math.round(distance / 1000.0 * 100.0) / 100.0;
+                long durationMinutes = Math.round(duration / 60.0);
+
+                //convert current location LatLng to a string (latitude,longitude)
+                String routeStart = currentLocation.latitude + "," + currentLocation.longitude;
+
+                //convert random point LatLng to a string (latitude,longitude)
+                String routeEnd = randomPoint.latitude + "," + randomPoint.longitude;
+
+                //insert data into the database and gets the row ID
+                long rowId = insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
+
+                //get address for the random point (reverse geocoding)
+                resolveAndInsertAddress(randomPoint, rowId);
+
+        } catch (JSONException e) {
+            Log.e("mLogTag", "Error extracting summary information");
+            e.printStackTrace();
+        }
+            dbHelper.printDatabaseContents(); //delete
         }
     }
+    //inserts route start and route end coordinates, route distance and duration to sqlite db
+    public long insertLocation(String routeStart, String routeEnd, Double distance, Long duration) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
 
+        ContentValues values = new ContentValues();
+
+        if (routeStart != null) values.put(DatabaseHelper.COLUMN_ROUTE_START, routeStart);
+        if (routeEnd != null) values.put(DatabaseHelper.COLUMN_ROUTE_END, routeEnd);
+        if (distance != null) values.put(DatabaseHelper.COLUMN_DISTANCE, distance);
+        if (duration != null) values.put(DatabaseHelper.COLUMN_DURATION, duration);
+
+        return db.insert(DatabaseHelper.TABLE_NAME, null, values);
+    }
+
+    //getting the closest address to the random point
     private void resolveAndInsertAddress(LatLng randomPoint, long rowId) {
         Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
         try {
@@ -402,7 +387,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             updateAddress(rowId, "Error getting address");
         }
     }
-
+    // insert the closest address around random point to database
     private void updateAddress(long rowId, String address) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();

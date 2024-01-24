@@ -16,7 +16,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center"
-        android:layout_marginBottom="25dp"
+        android:layout_marginBottom="8dp"
         android:backgroundTint="@color/green"
         android:text="@string/main_button"
         android:onClick="onWalkButtonClick"/>
@@ -24,10 +24,10 @@
     <Button
         android:id="@+id/btnListView"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="270dp"
+        android:layout_height="37dp"
+        android:layout_marginStart="275dp"
         android:layout_marginTop="50dp"
-        android:backgroundTint="@color/green"
+        android:backgroundTint="@color/light_blue"
         android:onClick="onListViewButtonClick"
-        android:text="List View" />
+        android:text="@string/list_view" />
 </FrameLayout>

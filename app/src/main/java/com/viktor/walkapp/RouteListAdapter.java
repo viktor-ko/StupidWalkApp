@@ -1,5 +1,6 @@
 package com.viktor.walkapp;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.view.LayoutInflater;
@@ -27,9 +28,9 @@ public class RouteListAdapter extends CursorAdapter {
         TextView textDuration = view.findViewById(R.id.text_duration);
 
         // Extract data from the cursor and put it to the TextViews
-        String address = cursor.getString(cursor.getColumnIndex("address"));
-        double distance = cursor.getDouble(cursor.getColumnIndex("distance"));
-        long duration = cursor.getLong(cursor.getColumnIndex("duration"));
+        @SuppressLint("Range") String address = cursor.getString(cursor.getColumnIndex("address"));
+        @SuppressLint("Range") double distance = cursor.getDouble(cursor.getColumnIndex("distance"));
+        @SuppressLint("Range") long duration = cursor.getLong(cursor.getColumnIndex("duration"));
 
         textAddress.setText(address);
         textDistance.setText("Distance: " + distance + " km");
