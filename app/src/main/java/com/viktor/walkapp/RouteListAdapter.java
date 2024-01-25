@@ -27,11 +27,12 @@ public class RouteListAdapter extends CursorAdapter {
         TextView textDistance = view.findViewById(R.id.text_distance);
         TextView textDuration = view.findViewById(R.id.text_duration);
 
-        // Extract data from the cursor and put it to the TextViews
+        //extract address, distance and duration from the cursor and put it to the assigned TextViews
         @SuppressLint("Range") String address = cursor.getString(cursor.getColumnIndex("address"));
         @SuppressLint("Range") double distance = cursor.getDouble(cursor.getColumnIndex("distance"));
         @SuppressLint("Range") long duration = cursor.getLong(cursor.getColumnIndex("duration"));
 
+        //text view format
         textAddress.setText(address);
         textDistance.setText("Distance: " + distance + " km");
         textDuration.setText("Walking time: " + duration + " min");

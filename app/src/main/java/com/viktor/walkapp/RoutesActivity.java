@@ -30,7 +30,7 @@ public class RoutesActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        //extract data from the database
         database = dbHelper.getWritableDatabase();
         cursor = database.rawQuery("SELECT id as _id, * FROM " + DatabaseHelper.TABLE_NAME, null);
 

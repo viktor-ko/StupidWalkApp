@@ -55,7 +55,7 @@
     "elementType": "geometry",
     "stylers": [
       {
-        "color": "#dfd2ae"
+        "color": "#cedece"
       }
     ]
   },
@@ -90,7 +90,16 @@
     "elementType": "geometry.fill",
     "stylers": [
       {
-        "color": "#a5b076"
+        "color": "#aecfa5"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text",
+    "stylers": [
+      {
+        "visibility": "off"
       }
     ]
   },
@@ -135,7 +144,7 @@
     "elementType": "geometry",
     "stylers": [
       {
-        "color": "#f8c967"
+        "color": "#e8e8e8"
       }
     ]
   },
@@ -144,7 +153,16 @@
     "elementType": "geometry.stroke",
     "stylers": [
       {
-        "color": "#e9bc62"
+        "color": "#c7c7c7"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
       }
     ]
   },
@@ -153,7 +171,7 @@
     "elementType": "geometry",
     "stylers": [
       {
-        "color": "#e98d58"
+        "color": "#cdd7e1"
       }
     ]
   },
@@ -162,7 +180,7 @@
     "elementType": "geometry.stroke",
     "stylers": [
       {
-        "color": "#db8555"
+        "color": "#9fb1b7"
       }
     ]
   },
@@ -172,14 +190,6 @@
     "stylers": [
       {
         "color": "#806b63"
-      }
-    ]
-  },
-  {
-    "featureType": "transit",
-    "stylers": [
-      {
-        "visibility": "off"
       }
     ]
   },
@@ -220,11 +230,55 @@
     ]
   },
   {
+    "featureType": "transit.station.bus",
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station.rail",
+    "stylers": [
+      {
+        "visibility": "on"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station.rail",
+    "elementType": "geometry.fill",
+    "stylers": [
+      {
+        "visibility": "on"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station.rail",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "visibility": "on"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station.rail",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
     "featureType": "water",
     "elementType": "geometry.fill",
     "stylers": [
       {
-        "color": "#b9d3c2"
+        "color": "#add4db"
       }
     ]
   },
