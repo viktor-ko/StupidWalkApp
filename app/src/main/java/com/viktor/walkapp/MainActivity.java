@@ -67,8 +67,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
         mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style));
     }
+
     //button STUPID WALK
     public void onWalkButtonClick(View view) {
+
         //get current location using LocationManager
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -79,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 return;
             }
             Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 10, locationListener);
 
             if (lastKnownLocation != null) {
                 currentLocation = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
@@ -114,7 +117,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         LatLngBounds bounds = builder.build();
-        int padding = 100; // Adjust this value as needed
+        int padding = 100;
 
         mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
     }
@@ -199,19 +202,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         double minDistanceKm = 1.0;
         double maxDistanceKm = 1.5;
 
-        //Alternative method of generation of random coordinates - instead of generating random coordinate,
+        //alternative method of generation of random coordinates - instead of generating random coordinate,
         //now I generate random angle from current location and random distance (between 1-1.5 km)
-        //Used due to clustering of points and generation only on the north from current location with previous method
+        //used due to clustering of points and generation only on the north from current location with previous method
         for (int i = 0; i < 3; i++) {
-            double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);// get random distance within the specified range
-            double bearing = random.nextDouble() * 360; // adding random angle
+            double distance = minDistanceKm + random.nextDouble() * (maxDistanceKm - minDistanceKm);//get random distance within the specified range
+            double bearing = random.nextDouble() * 360; //adding random angle
 
             //get new random point based on the distance and bearing
             LatLng randomPoint = getPointAtDistanceAndBearing(currentLocation, distance, bearing);
 
             //add random points to the list
             randomPoints.add(randomPoint);
-//                // Assign markers based on index
+//                //assign markers based on index
 //                String markerResourceName;
 //                switch (i) {
 //                    case 0:
@@ -224,11 +227,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 //                        markerResourceName = "three";
 //                        break;
 //                    default:
-//                        markerResourceName = "one"; // Default to "one" if unexpected index
+//                        markerResourceName = "one";
 //                        break;
 //                }
 //
-//                // Add markers for random points from PNG files
 //                int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
 //                if (mMap != null) {
 
@@ -319,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 GeoJsonLayer layer = resultPair.first;
                 JSONObject jsonObject = resultPair.second;
 
-                // styling and adding geojson to the map
+                //styling and adding geojson to the map
                 if (layer != null) {
                     GeoJsonLineStringStyle lineStringStyle = layer.getDefaultLineStringStyle();
                     lineStringStyle.setColor(Color.parseColor("#07E9CD"));
@@ -327,7 +329,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     layer.addLayerToMap();
 
-                    // Access GeoJSON structure
+                    //access GeoJSON structure
                     try {
                         JSONArray features = jsonObject.getJSONArray("features");
 
@@ -434,7 +436,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             updateAddress(rowId, "Error getting address");
         }
     }
-    // insert the closest address around random point to database
+    //insert the closest address around random point to database
     private void updateAddress(long rowId, String address) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
