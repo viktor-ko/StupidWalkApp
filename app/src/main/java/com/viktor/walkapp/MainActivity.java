@@ -32,10 +32,10 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     private LatLng currentLocation;
     private DatabaseHelper dbHelper;
+    Marker marker;
 
     @Override
     public void onMapReady(GoogleMap map) {
@@ -146,13 +147,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 14));
 
+                    if (marker != null)
+                        marker.remove();
+
                     MarkerOptions myMarker = new MarkerOptions()
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.location_marker))
                             .position(currentLocation)
                             .anchor(0.5f, 1)
                             .alpha(1f)
                             .title("Start walking!");
-                    mMap.addMarker(myMarker);
+                    marker = mMap.addMarker(myMarker);
                 }
             }
         };
@@ -214,25 +218,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             //add random points to the list
             randomPoints.add(randomPoint);
-//                //assign markers based on index
-//                String markerResourceName;
-//                switch (i) {
-//                    case 0:
-//                        markerResourceName = "one";
-//                        break;
-//                    case 1:
-//                        markerResourceName = "two";
-//                        break;
-//                    case 2:
-//                        markerResourceName = "three";
-//                        break;
-//                    default:
-//                        markerResourceName = "one";
-//                        break;
-//                }
-//
-//                int markerResourceId = getResources().getIdentifier(markerResourceName, "drawable", getPackageName());
-//                if (mMap != null) {
 
             //add marker for each random point
             mMap.addMarker(new MarkerOptions()
@@ -245,6 +230,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     //calculate new point based on starting point, distance, and bearing
     private LatLng getPointAtDistanceAndBearing(LatLng start, double distance, double bearing) {
         double earthRadius = 6371.0; //Earth radius in km
+
         //convert lat long to radians
         double lat1 = Math.toRadians(start.latitude);
         double lon1 = Math.toRadians(start.longitude);
@@ -308,9 +294,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     return null;
                 }
             } catch (IOException e) {
-                Log.e("mLogTag", "GeoJSON file could not be read");
+                Log.e("mLogTag", "GeoJSON file could not be read"+ e.getMessage(), e);
             } catch (JSONException e) {
-                Log.e("mLogTag", "Error parsing JSON response");
+                Log.e("mLogTag", "Error parsing JSON response"+ e.getMessage(), e);
+            } catch (Exception e) {
+                Log.e("mLogTag", "Unexpected error: " + e.getMessage(), e);
             }
             return null;
         }
@@ -381,7 +369,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             } else {
                 Log.e("mLogTag", "AsyncTask resultPair is null");
             }
-//            dbHelper.printDatabaseContents();
         }
     }
     //inserts route start and route end coordinates, route distance and duration to sqlite db
@@ -406,7 +393,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return db.insert(DatabaseHelper.TABLE_NAME, null, values);
     }
 
-    //getting the closest address to the random point
+    //get the closest address to the random point
     private void resolveAndInsertAddress(LatLng randomPoint, long rowId) {
         Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
         try {

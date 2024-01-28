@@ -1,21 +1,8 @@
 package com.viktor.walkapp;
 
 import android.content.Context;
-import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.content.ContentValues;
-import android.database.sqlite.SQLiteQueryBuilder;
-import android.provider.BaseColumns;
-import android.util.Log;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "walking_routes_v4.db";
@@ -46,34 +33,4 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
         onCreate(db);
     }
-
-    // delete later
-    public void printDatabaseContents() {
-        Log.d("DatabaseDebug", "Printing database contents...");
-
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_NAME, null);
-
-        try {
-            if (cursor.moveToFirst()) {
-                do {
-                    int id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
-                    String routeStart = cursor.getString(cursor.getColumnIndex(COLUMN_ROUTE_START));
-                    String routeEnd = cursor.getString(cursor.getColumnIndex(COLUMN_ROUTE_END));
-                    String address = cursor.getString(cursor.getColumnIndex(COLUMN_ADDRESS));
-                    double distance = cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE));
-                    long duration = cursor.getLong(cursor.getColumnIndex(COLUMN_DURATION));
-
-                    Log.d("DatabaseDebug", "ID: " + id + ", Route Start: " + routeStart + ", Route End: " + routeEnd + "Address: " + address + ", Distance: " + distance + ", Duration: " + duration);
-                } while (cursor.moveToNext());
-            } else {
-                Log.d("DatabaseDebug", "No data in the database.");
-            }
-        } finally {
-            cursor.close();
-            db.close();
-        }
-    }
-
 }
-
