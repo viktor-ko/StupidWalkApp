@@ -34,7 +34,7 @@ public class RouteListAdapter extends CursorAdapter {
 
         //text view format
         textAddress.setText(address);
-        textDistance.setText("Distance: " + distance + " km, " + Math.round(distance*1000/0.7) + " steps" );
+        textDistance.setText("Distance: " + distance + " km (" + Math.round(distance*1000/0.7) + " steps)");
         textDuration.setText("Walking time: " + duration + " min");
     }
 }

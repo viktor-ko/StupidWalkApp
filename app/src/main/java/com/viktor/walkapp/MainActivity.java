@@ -2,10 +2,8 @@ package com.viktor.walkapp;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.content.Context;
 import android.location.Address;
@@ -69,7 +67,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style));
     }
 
-    //button STUPID WALK
     public void onWalkButtonClick(View view) {
 
         //get current location using LocationManager
@@ -101,7 +98,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    //button List view
     public void onListViewButtonClick(View view) {
         Intent intent = new Intent(this, RoutesActivity.class);
         startActivity(intent);
@@ -181,7 +177,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Manifest.permission.ACCESS_COARSE_LOCATION
         };
         locationPermissionRequest.launch(PERMISSIONS);
-
     }
 
     //generate 3 random points within walking distance from current location
@@ -345,7 +340,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     String routeEnd = randomPoint.latitude + ", " + randomPoint.longitude;
 
                                     //insert data into the database and gets the row ID
-                                    long rowId = insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
+                                    long rowId = dbHelper.insertLocation(routeStart, routeEnd, distanceKilometers, durationMinutes);
 
                                     //get address for the random point (reverse geocoding)
                                     resolveAndInsertAddress(randomPoint, rowId);
@@ -371,27 +366,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         }
     }
-    //inserts route start and route end coordinates, route distance and duration to sqlite db
-    public long insertLocation(String routeStart, String routeEnd, Double distance, Long duration) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-
-        ContentValues values = new ContentValues();
-
-        if (routeStart != null) {
-            values.put(DatabaseHelper.COLUMN_ROUTE_START, routeStart);
-        }
-        if (routeEnd != null) {
-            values.put(DatabaseHelper.COLUMN_ROUTE_END, routeEnd);
-        }
-        if (distance != null) {
-            values.put(DatabaseHelper.COLUMN_DISTANCE, distance);
-        }
-        if (duration != null) {
-            values.put(DatabaseHelper.COLUMN_DURATION, duration);
-        }
-
-        return db.insert(DatabaseHelper.TABLE_NAME, null, values);
-    }
 
     //get the closest address to the random point
     private void resolveAndInsertAddress(LatLng randomPoint, long rowId) {
@@ -409,25 +383,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         addressStringBuilder.append(", ");
                     }
                 }
-
+                //add address in the database
                 String addressString = addressStringBuilder.toString();
-                //update the address in the database
-                updateAddress(rowId, addressString);
+                dbHelper.updateAddress(rowId, addressString);
             } else {
-                //update with no address found
-                updateAddress(rowId, "No address found");
+                dbHelper.updateAddress(rowId, "No address found");
             }
         } catch (IOException e) {
             e.printStackTrace();
-            //update with error message
-            updateAddress(rowId, "Error getting address");
+            dbHelper.updateAddress(rowId, "Error getting address");
         }
-    }
-    //insert the closest address around random point to database
-    private void updateAddress(long rowId, String address) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(DatabaseHelper.COLUMN_ADDRESS, address);
-        db.update(DatabaseHelper.TABLE_NAME, values, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(rowId)});
     }
 }
