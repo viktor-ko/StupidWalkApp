@@ -1,1 +1,1 @@
-![inspiration](https://github.com/noeigenschaften/StupidWalkApp/assets/36310815/d50bb737-af4e-45d3-bcce-2f31cd5b0a59)
+![inspiration](https://github.com/noeigenschaften/StupidWalkApp/assets/36310815/c09f57d7-ef90-490d-9f81-32cd58e3337c)
