@@ -1,5 +1,5 @@
 # Stupid Walk App
-https://github.com/user-attachments/assets/05336f2b-9e9e-49d6-a61a-0f68e7414b17
+https://github.com/user-attachments/assets/4722b07d-7d23-4f95-bb17-36eb87130ad4
 
 This simple Android app encourages you to finally take that stupid walk for your stupid physical and mental health, freeing you from the torment of choosing where to go. With just one click, you will instantly get three unique walking routes to randomly selected destinations within a 15-30-minute walk of your current location. It’s as easy as that: stop thinking, start walking!
 
