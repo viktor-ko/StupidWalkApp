@@ -1,3 +1,44 @@
+# Stupid Walk App
+https://github.com/user-attachments/assets/05336f2b-9e9e-49d6-a61a-0f68e7414b17
+
+This simple Android app encourages you to finally take that stupid walk for your stupid physical and mental health, freeing you from the torment of choosing where to go. With just one click, you will instantly get three unique walking routes to randomly selected destinations within a 15-30-minute walk of your current location. It’s as easy as that: stop thinking, start walking!
+
+The app was created for the "Mobile Cartography" course of the Cartography MSc programme at the Technical University of Dresden (TUD) in the WS 2023/24. Its idea evidently originated from this classic meme:
+
+<img src="https://github.com/noeigenschaften/StupidWalkApp/assets/36310815/c09f57d7-ef90-490d-9f81-32cd58e3337c" width="500">
+
+## Functionality 
+The app uses Google Maps to display the user's current location and generate random walking routes within a specified distance. Users can view the routes on a map, see detailed information about each route, and access a list of saved routes.
+Activities
+MainActivity
+Functionality:
+Initializes the map and location services.
+Fetches the user's current location and displays it on the map.
+Generates random walking routes within a specified distance from the current location.
+Displays the generated routes on the map and saves them to the database.
+Provides buttons to start walking and view the list of saved routes.
+RoutesActivity
+Functionality:
+Displays a list of saved walking routes from the database.
+Allows users to click on a route to view it on the map in MapActivity.
+MapActivity
+Functionality:
+Displays a specific walking route on the map.
+Shows start and end markers for the route.
+Adjusts the camera to fit the route within the view.
+Fetches and displays the route using the OpenRouteService API.
+Other Important Files
+RouteListAdapter
+Functionality:
+Custom adapter for displaying route information in a list view.
+Binds route data (address, distance, duration) to the list item views.
+DatabaseHelper
+Functionality:
+Manages the SQLite database.
+Creates the database and tables.
+Inserts route data (start and end coordinates, distance, duration) into the database.
+Updates the address for a route.
+Clears the database.
 
 ##  Getting Started
 
@@ -30,6 +71,4 @@ StupidWalkApp/
         ├── res: project resources - fonts, images, XML layouts, etc
         └──  AndroidManifest.xml: app configuration    
 ```
-The app is inspired by this legendary meme:
 
-<img src="https://github.com/noeigenschaften/StupidWalkApp/assets/36310815/c09f57d7-ef90-490d-9f81-32cd58e3337c" width="500">
