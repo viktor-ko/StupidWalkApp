@@ -17,5 +17,6 @@
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="8dp"
         android:backgroundTint="@color/green"
-        android:text="@string/map" />
+        android:text="@string/map"
+        android:textColor="@color/white"/>
 </RelativeLayout>

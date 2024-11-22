@@ -62,4 +62,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_ADDRESS, address);
         this.db.update(TABLE_NAME, values, COLUMN_ID + " = ?", new String[]{String.valueOf(rowId)});
     }
+
+    //clear the database
+    public void clearDatabase() {
+        this.db.delete(TABLE_NAME, null, null);
+    }
 }

@@ -19,6 +19,7 @@
         android:layout_marginBottom="8dp"
         android:backgroundTint="@color/green"
         android:text="@string/main_button"
+        android:textColor="@color/white"
         android:onClick="onWalkButtonClick"/>
 
     <Button
@@ -29,5 +30,6 @@
         android:layout_marginTop="16dp"
         android:backgroundTint="@color/light_blue"
         android:onClick="onListViewButtonClick"
-        android:text="@string/list_view" />
+        android:text="@string/list_view"
+        android:textColor="@color/white"/>
 </FrameLayout>

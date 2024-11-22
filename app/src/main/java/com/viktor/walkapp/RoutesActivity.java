@@ -61,8 +61,7 @@ public class RoutesActivity extends AppCompatActivity {
         buttonMap.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(RoutesActivity.this, MainActivity.class);
-                startActivity(intent);
+                finish(); // Closes the current activity and returns to the previous one in the back stack
             }
         });
     }

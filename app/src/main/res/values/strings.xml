@@ -2,5 +2,5 @@
     <string name="app_name">Stupid Walk</string>
     <string name="main_button">STUPID WALK</string>
     <string name="list_view">Routes</string>
-    <string name="map">Map</string>
+    <string name="map">Show map</string>
 </resources>

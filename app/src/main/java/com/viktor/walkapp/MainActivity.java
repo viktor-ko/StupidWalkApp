@@ -66,6 +66,54 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
         mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style));
+
+        // If location permissions are already granted, fetch the current location
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fetchAndZoomToCurrentLocation();
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fetchAndZoomToCurrentLocation() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        if (locationManager != null) {
+            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+            if (lastKnownLocation == null) {
+                lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            }
+
+            if (lastKnownLocation != null) {
+                LatLng location = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+                updateMapWithLocation(location);
+            } else {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, new LocationListener() {
+                    @Override
+                    public void onLocationChanged(Location location) {
+                        LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                        updateMapWithLocation(currentLatLng);
+                        locationManager.removeUpdates(this); // Stop updates after getting the location
+                    }
+                    @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
+                    @Override public void onProviderEnabled(String provider) {}
+                    @Override public void onProviderDisabled(String provider) {}
+                });
+            }
+        } else {
+            Toast.makeText(this, "Location Manager unavailable", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateMapWithLocation(LatLng location) {
+        if (mMap != null) {
+            mMap.clear(); // Clear existing markers
+            mMap.addMarker(new MarkerOptions()
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.location_marker))
+                    .position(location)
+                    .title("You are here!"));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 14));
+        }
     }
 
     public void onWalkButtonClick(View view) {
@@ -183,26 +231,67 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         };
 
-        ActivityResultLauncher<String[]> locationPermissionRequest = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+        ActivityResultLauncher<String[]> locationPermissionRequest = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                result -> {
                     Boolean fineLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false);
                     Boolean coarseLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false);
 
                     if (fineLocationGranted != null && fineLocationGranted) {
-                        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 10, locationListener);
                         mMap.setMyLocationEnabled(true);
+                        fetchAndZoomToCurrentLocation();
                     } else if (coarseLocationGranted != null && coarseLocationGranted) {
-                        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+                        fetchAndZoomToCurrentLocation();
                     } else {
-                        Toast.makeText(this, "Location cannot be obtained due to missing permission.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Location permissions not granted.", Toast.LENGTH_SHORT).show();
                     }
-                }
-        );
+                });
 
-        String[] PERMISSIONS = {
+        locationPermissionRequest.launch(new String[]{
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION
-        };
-        locationPermissionRequest.launch(PERMISSIONS);
+        });
+        //Clear the database
+        dbHelper.clearDatabase();
+    }
+
+    // Interface for the callback
+    public interface AddressCallback {
+        void onAddressResolved(String address);
+    }
+
+    // MarkerAddress method to resolve addresses for the markers
+    public void MarkerAddress(LatLng point, AddressCallback callback) {
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        new Thread(() -> {
+            try {
+                List<Address> addresses = geocoder.getFromLocation(point.latitude, point.longitude, 1);
+                if (addresses != null && !addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+
+                    // Manually format the address
+                    String street = address.getThoroughfare(); // Street name
+                    String number = address.getSubThoroughfare(); // Building number
+                    String postalCode = address.getPostalCode(); // Postal code
+                    String city = address.getLocality(); // City name
+                    String countryCode = address.getCountryCode(); // ISO country code
+
+                    // Construct the desired address format
+                    StringBuilder formattedAddress = new StringBuilder();
+                    if (street != null) {formattedAddress.append(street);}
+                    if (number != null) {formattedAddress.append(" ").append(number);}
+                    if (postalCode != null) {formattedAddress.append(", ").append(postalCode);}
+                    if (city != null) {formattedAddress.append(" ").append(city);}
+                    if (countryCode != null) {formattedAddress.append(", ").append(countryCode);}
+
+                    callback.onAddressResolved(formattedAddress.toString());
+                } else {
+                    callback.onAddressResolved("Unknown location");
+                }
+            } catch (IOException e) {
+                callback.onAddressResolved("Error resolving address");
+            }
+        }).start();
     }
 
     //generate 3 random points within walking distance from current location
@@ -240,11 +329,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             //add random points to the list
             randomPoints.add(randomPoint);
 
-            //add marker for each random point
-            mMap.addMarker(new MarkerOptions()
-                    .position(randomPoint)
-                    .title("Well done!")
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.point_marker)));
+            // Resolve address for each random point and add marker with resolved address
+            MarkerAddress(randomPoint, new AddressCallback() {
+                @Override
+                public void onAddressResolved(String address) {
+                    runOnUiThread(() -> {
+                        mMap.addMarker(new MarkerOptions()
+                                .position(randomPoint)
+                                .title(address) //Use resolved address as title
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.point_marker)));
+                    });
+                }
+            });
         }
         return randomPoints;
     }
@@ -428,92 +524,4 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             dbHelper.updateAddress(rowId, "Error getting address");
         }
     }
-
-
-//    public void onWalkButtonClick(View view) {
-//
-//        //get current location using LocationManager
-//        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-//
-//        if (locationManager != null) {
-//            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-//                    && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 123);
-//                return;
-//            }
-//            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-//            //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 10, locationListener);
-//
-//            if (lastKnownLocation != null) {
-//                currentLocation = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
-//
-//                //generate 3 random points within 1-1.5 km from current location
-//                List<LatLng> randomPoints = generateRandomPoints(currentLocation);
-//
-//                //display 3 walking routes from current location to the generated random points
-//                displayWalkingRoutes(currentLocation, randomPoints);
-//
-//                //move camera position to fit all points
-//                zoomToPoints(randomPoints, currentLocation);
-//            } else {
-//                Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
-//            }
-//        }
-//    }
-
-    // onwalkbuttonclick method doing the following:
-    // 1. Get the current location using the LocationManager.
-    // 2. Check if the location permission is granted. If not, request the permission.
-    // 3. Get the last known location from the GPS provider.
-    // 4. If the GPS location is unavailable, fall back to the Network Provider.
-    // 5. If the last known location is not null, set the current location to the latitude and longitude of the location.
-    // 6. Generate 3 random points within 1-1.5 km from the current location.
-    // 7. Display 3 walking routes from the current location to the generated random points.
-    // 8. Move the camera position to fit all points.
-    // 9. If the Location Manager is unavailable, display a toast message.
-    // 10. If the location permission is not granted, request the permission.
-    // 11. Actively request updates to get the current location.
-    // 12. Set the current location to the latitude and longitude of the location.
-
-//    private void resolveAndInsertAddress(LatLng randomPoint, long rowId) {
-//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-//                != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(this,
-//                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-//            return;
-//        }
-//        Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
-//        try {
-//            Log.d("resolveAndInsertAddress", "Fetching address for coordinates: " + randomPoint.latitude + ", " + randomPoint.longitude);
-//            List<Address> addressList = geocoder.getFromLocation(randomPoint.latitude, randomPoint.longitude, 1);
-//            if (addressList != null && !addressList.isEmpty()) {
-//                Log.d("resolveAndInsertAddress", "Address list size: " + addressList.size());
-//                Address address = addressList.get(0);
-//                StringBuilder addressStringBuilder = new StringBuilder();
-//
-//                // Append each address line to the StringBuilder
-//                for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
-//                    addressStringBuilder.append(address.getAddressLine(i));
-//                    if (i < address.getMaxAddressLineIndex()) {
-//                        addressStringBuilder.append(", ");
-//                    }
-//                }
-//                // Add address in the database
-//                String addressString = addressStringBuilder.toString();
-//                Log.d("resolveAndInsertAddress", "Resolved address: " + addressString);
-//                dbHelper.updateAddress(rowId, addressString);
-//            } else {
-//                Log.d("resolveAndInsertAddress", "No address found");
-//                dbHelper.updateAddress(rowId, "No address found");
-//            }
-//        } catch (IOException e) {
-//            Log.e("GeocoderError", "Error fetching address: " + e.getMessage());
-//            dbHelper.updateAddress(rowId, "Error fetching address: " + e.getMessage());
-//        } catch (IllegalArgumentException e) {
-//            // Handle invalid latitude or longitude
-//            Log.e("GeocoderError", "Invalid coordinates provided: " + e.getMessage(), e);
-//            dbHelper.updateAddress(rowId, "Invalid coordinates");
-//        }
-//    }
 }
-
